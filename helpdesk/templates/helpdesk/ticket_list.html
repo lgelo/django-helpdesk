@@ -1,41 +1,242 @@
-{% extends "helpdesk/base.html" %}{% load i18n %}{% load url from future %}
-{% block helpdesk_title %}{% trans "Ticket Listing" %}{% endblock %}
-{% block helpdesk_head %}
-<script type='text/javascript' language='javascript' src='{{ STATIC_URL }}helpdesk/filter.js'></script>
-<script type='text/javascript' language='javascript' src='{{ STATIC_URL }}helpdesk/hover.js'></script>
-
-<script type='text/javascript' language='javascript'>
-$(document).ready(function() {
-    
-    // Enable Tabs
-    $("#searchtabs").tabs({
-        collapsible:true
-    });
-    // Hide all tabs by default
-    $("#searchtabs > ul > li").removeClass().addClass("ui-corner-top ui-state-default");
-    $("#searchtabs > div").addClass("ui-tabs-hide");
-
-    $("#select_all").click(function() {
-        $(".ticket_multi_select").attr('checked', true);
-        return false;
-    });
-    $("#select_none").click(function() {
-        $(".ticket_multi_select").attr('checked', false);
-        return false;
-    });
-    $("#select_inverse").click(function() {
-        $(".ticket_multi_select").each(function() {
-            $(this).attr('checked', !$(this).attr('checked'));
-        });
-        return false;
-    });
-});
-</script>
-{% endblock %}
-{% block helpdesk_body %}
-
+{% extends "helpdesk/base.html" %}
+{% load i18n %}
+{% load url from future %}
 {% load in_list %}
 
+{% block helpdesk_title %}{% trans "Ticket Listing" %}{% endblock %}
+
+{% block helpdesk_body %}
+<div id="ticket_list_query">
+  <ul class="nav nav-tabs">
+    <li class="active"><a href="#query_options" data-toggle="tab">{% trans 'Query Options' %}</a></li>
+    {% if not from_saved_query %}
+      <li><a href="#save_query" data-toggle="tab">{% trans 'Save This Query' %}</a></li>
+    {% endif %}
+    {% if user_saved_queries %}
+      <li><a href="#load_query" data-toggle="tab">{% trans 'Load Saved Query' %}</a></li>
+    {% endif %}
+  </ul>
+</div>
+
+<div id="ticket_list_query_content" class="tab-content">
+  <div class="tab-pane active" id="query_options">
+    <br>
+    <div class="row">
+      <div class="col-xs-12 col-sm-6 col-md-3">
+        <div class="btn-group">
+          <div class="btn-group">
+            <button id="btn_filter" type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+              {% trans 'Select Filter' %} <span class="caret"></span>
+            </button>
+            <ul id="ul_filter" class="dropdown-menu" role="menu">
+              <li><a href="#" data-value="Sort">{% trans "Sorting" %}</a></li>
+              <li><a href="#" data-value='Owner'>{% trans "Owner" %}</a></li>
+              <li><a href="#" data-value='Queue'>{% trans "Queue" %}</a></li>
+              <li><a href="#" data-value='Status'>{% trans "Status" %}</a></li>
+              <li><a href="#" data-value='Keywords'>{% trans "Keywords" %}</a></li>
+              <li><a href="#" data-value='Dates'>{% trans "Date Range" %}</a></li>
+              {% if tags_enabled %}
+                <li><a href="#"  data-value='Tags'>{% trans "Tags" %}</a></li>
+              {% endif %}
+            </ul>
+          </div>
+        <button id="add_filter" type="button" class="btn btn-default"><i class="fa fa-plus"></i></button>
+        </div>
+      </div>
+    </div>
+   <div class="row"> 
+      <br>
+    {% include 'helpdesk/ticket_filters.html' %}
+    </div>
+  </div>
+  {% if not from_saved_query %}
+    <div class="tab-pane" id="save_query">
+      <br>
+      <form form-method='post' action='{% url 'helpdesk_savequery' %}' role="form">
+        <input type='hidden' name='query_encoded' value='{{ urlsafe_query }}' />
+        <div class="form-group">
+          <label for="tite">{% trans 'Query Name' %}</label>
+          <input class="form-control" type="text" id="title" name="title" placeholder="{% trans 'Enter Query Name' %}">
+          <p class="help-block">{% trans "This name appears in the drop-down list of saved queries. If you share your query, other users will see this name, so choose something clear and descriptive!" %}</p>    
+        </div>        
+        <div class="checkbox">
+          <label>
+            <input type='checkbox' name='shared' id='shared' />{% trans 'Share With Others' %}
+          </label>
+        </div>
+        <p class="help-block">{% trans "This name appears in the drop-down list of saved queries. If you share your query, other users will see this name, so choose something clear and descriptive!" %}</p>
+       <button class="btn btn-primary" type="submit">{% trans "Save" %}</button>
+        {% csrf_token %}
+      </form>
+    </div>
+  {%   endif %}
+</div>
+
+{{ search_message|safe }}
+
+  <div class="row">
+    <div class="col-sm-12">
+      <form method='post' action='{% url 'helpdesk_mass_update' %}' id="ticket_mass_update">
+        <div id="ticket_list" class="panel panel-default">
+          <div class="panel-heading">
+            {% trans 'Tickets' %}
+            <p class="small pull-right"><label>{% trans "Select:" %} </label> 
+              <a href='#select_all' id='select_all'>{% trans "All" %}</a> | 
+              <a href='#select_none' id='select_none'>{% trans "None" %}</a> |
+              <a href='#select_inverse' id='select_inverse'>{% trans "Inverse" %}</a>
+            </p>
+          </div>    
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th class="col-sm-1">#</th>
+                <th class="col-sm-4">{% trans 'Title' %}</th>
+                <th class="col-sm-2">{% trans 'Queue' %}</th>
+                <th class="col-sm-1">{% trans 'Status' %}</th>
+                <th class="col-sm-2">{% trans 'Created' %}</th>
+                <th class="col-sm-1">{% trans 'Owner' %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if tickets %}
+                {% for ticket in tickets.object_list %}
+                  <tr>
+                    <td>
+                      <input type='checkbox' name='ticket_id' value='{{ ticket.id }}' class='ticket_multi_select' />
+                      <a href='{{ ticket.get_absolute_url }}'>{{ ticket.ticket }}</a>
+                    </td>
+                    <td>{{ ticket.get_priority_span }} {{ ticket.title }}</td>
+                    <td>{{ ticket.queue }}</td>
+                    <td>{{ ticket.get_status }}</td>
+                    <td><span title='{{ ticket.created|date:"r" }}'>{{ ticket.created|timesince }} ago</span></td>
+                    <td>{{ ticket.get_assigned_to }}</td>
+                    {% if tags_enabled %}
+                      <td>
+                        {{ ticket.tags }}
+                      </td>
+                    {% endif %}
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr><td colspan='5'>{% trans "No Tickets Match Your Selection" %}</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+
+        <ul class="pagination">
+          {% if tickets.has_previous %}
+            <li>
+              <a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ tickets.previous_page_number }}">&laquo;</a>
+            </li>
+          {% else %}
+            <li class="disabled"><a href="#">&laquo;</a></li>
+          {% endif %}
+          {% for page in tickets.paginator.page_range %}    
+            {% if page == tickets.number %}
+              <li class="disabled">
+            {% else %}
+              <li>
+            {% endif %}
+              <a href="?page={{ page }}">{{ page }}</a>
+            </li>           
+          {% endfor %}
+          {% if tickets.has_next %}
+            <li>
+              <a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ tickets.next_page_number }}">&raquo;</a>
+            </li>
+          {% else %}
+            <li class="disabled"><a href="#">&raquo;</a></li>
+          {% endif %}
+        </ul> 
+        <div class="btn-group pull-right">
+          <div class="btn-group">
+            <button id="btn_mass_action" type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+              {% trans 'With Selected Tickets' %} <span class="caret"></span>
+            </button>
+            <ul id="ul_mass_action" class="dropdown-menu" role="menu">
+              <li><a href="#" data-value='take'>{% trans "Take (Assign to me)" %}</a></li>
+              <li><a href="#" data-value='delete'>{% trans "Delete" %}</a></li>
+              <li class="divider"></li>
+              <li class="dropdown-header">{% trans 'Close' %}</li>
+              <li><a href="#" data-value='close'>{% trans "Close (Don't Send E-Mail)" %}</a></li>
+              <li><a href="#" data-value='close_public'>{% trans "Close (Send E-Mail)" %}</a></li>
+              <li class="divider"></li>
+              <li class="dropdown-header">{% trans "Assign To" %}'</li>
+              <li><a href="#" data-value='unassign'>{% trans "Nobody (Unassign)" %}</a></li>
+              {% for u in user_choices %}
+                <li><a href="#" data-value='assign_{{ u.id }}'>{{ u.username }}</a></li>
+              {% endfor %}
+            </ul>
+          </div>
+          <button type="submit" class="btn btn-default"> {% trans 'Go' %} <i class="fa fa-play"></i></button>
+        </div>
+        <input type="hidden" id="input_action" name="action" value="">
+        {% csrf_token %}
+      </form>
+    </div>
+  </div>      
+
+  <script>
+  $(document).ready(function() {
+
+    $(document).on('click',"#ul_mass_action li a", function(){
+      $("#btn_mass_action:first-child").html($(this).text()+' <span class="caret"></span>');
+      $("#input_action").val($(this).data('value'));
+      return true;
+    });  
+  
+    $(document).on('click',"#ul_filter li a", function(){
+      var dropdown = $("#btn_filter:first-child");
+      dropdown.html($(this).text()+' <span class="caret"></span>');
+      dropdown.data('value', $(this).data('value'));
+      return true;
+    });  
+
+    $(document).on('click',"#select_all", function(){
+      $(".ticket_multi_select").prop('checked', true);
+      return false;
+    });
+
+    $(document).on('click',"#select_none", function() {
+      $(".ticket_multi_select").prop('checked', false);
+      return false;
+    });
+
+    $(document).on('click',"#select_inverse", function() {
+      $(".ticket_multi_select").each(function() {
+        $(this).prop('checked', !$(this).prop('checked'));
+      });
+      return false;
+    }); 
+
+    $(document).on('click', '#add_filter', function() {
+      var box = "#filter" + $("#btn_filter").data('value');
+      $(box).addClass('filterBoxShow')
+      $(box).parent().slideDown();
+      return false;
+    });
+
+    $(document).on('click', '.removeFilter', function() {
+      var boxName = "#" + $(this).parents(".filterBox").attr('id');
+      $(boxName).parent().slideUp();
+      $(boxName).children("input:text").each(function() {
+        $(this).val("");
+      });
+      $(boxName).children("input:checkbox").each(function() {
+        this.checked = false;
+      });
+      $(boxName).children("select").each(function() {
+        this.selectedIndex = -1;
+      });
+      return false;
+    });
+
+  });
+
+  </script>
+
+<!--
 <div id="searchtabs">
     <ul>
     <li><a href='#tabfilter'>{% trans "Query Options" %}</a></li>
@@ -140,7 +341,7 @@ $(document).ready(function() {
     </div>
     <hr style='clear: both;' />
     <input type='submit' value='{% trans "Apply Filter" %}' />
-    {% if from_saved_query and saved_query.user == user %}
+    {% if from_saved_query and saved_query.user = user %}
     <p>{% blocktrans with saved_query.title as query_name %}You are currently viewing saved query <em>{{ query_name }}</em>.{% endblocktrans %} <a href='{% url 'helpdesk_delete_query' saved_query.id %}'>{% trans "Delete Saved Query" %}</a></p>
     {% endif %}
     {% if from_saved_query %}
@@ -188,10 +389,8 @@ $(document).ready(function() {
 
 
 
-
-
-
-
+-->
+<!--
 {{ search_message|safe }}
 <form method='post' action='{% url 'helpdesk_mass_update' %}' id="ticket_mass_update">
 <table width='100%'>
@@ -233,4 +432,6 @@ $(document).ready(function() {
 
 <p><label for='id_mass_action'>{% trans "With Selected Tickets:" %}</label> <select name='action' id='id_mass_action'><option value='take'>{% trans "Take (Assign to me)" %}</option><option value='delete'>{% trans "Delete" %}</option><optgroup label='{% trans "Close" %}'><option value='close'>{% trans "Close (Don't Send E-Mail)" %}</option><option value='close_public'>{% trans "Close (Send E-Mail)" %}</option></optgroup><optgroup label='{% trans "Assign To" %}'><option value='unassign'>{% trans "Nobody (Unassign)" %}</option>{% for u in user_choices %}<option value='assign_{{ u.id }}'>{{ u.username }}</option>{% endfor %}</optgroup></select> <input type='submit' value='Go' /></p>
 {% csrf_token %}</form>
+
+-->
 {% endblock %}

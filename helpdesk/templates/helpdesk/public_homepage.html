@@ -1,70 +1,120 @@
-{% extends "helpdesk/public_base.html" %}{% load i18n %}{% load url from future %}
+{% extends "helpdesk/public_base.html" %}
+{% load i18n %}
+{% load url from future %}
+{% load helpdesk_bootstrap %}
 
 {% block helpdesk_body %}
+<div id="public_tabs">
+  <ul class="nav nav-tabs">
+    {% if helpdesk_settings.HELPDESK_VIEW_A_TICKET_PUBLIC %}
+      <li class="active"><a href="#view_ticket" data-toggle="tab">{% trans 'View a Ticket' %}</a></li>
+    {% endif %}
+    {% if helpdesk_settings.HELPDESK_SUBMIT_A_TICKET_PUBLIC %}
+      <li><a href="#submit_ticket" data-toggle="tab">{% trans 'Submit a Ticket' %}</a></li>
+    {% endif %}
+    {% if helpdesk_settings.HELPDESK_SHOW_KB_ON_HOMEPAGE %}
+      <li><a href="#knowledgebase" data-toggle="tab">{% trans 'Knowledgebase Articles' %}</a></li>
+    {% endif %}
+  </ul>
+</div>
 
-{% if helpdesk_settings.HELPDESK_SHOW_KB_ON_HOMEPAGE %}
-<h2>{% trans "Knowledgebase Articles" %}</h2>
-
-<table width='100%'>
-<tr class='row_tablehead'><td>{% trans "Knowledgebase Categories" %}</td></tr>
-<tr class='row_columnheads'><th>{% trans "Category" %}</th></tr>
-
-{% for category in kb_categories %}
-<tr class='row_even row_hover'><th><a href='{{ category.get_absolute_url }}'>{{ category.title }}</a></th></tr>
-<tr class='row_odd'><td>{{ category.description }}</td></tr>
-{% endfor %}
-</table>
-
-{% endif %}
-
-{% if helpdesk_settings.HELPDESK_VIEW_A_TICKET_PUBLIC %}
-<h2>{% trans "View a Ticket" %}</h2>
-
-<form method='get' action='{% url 'helpdesk_public_view' %}'>
-<fieldset>
-    <dl>
-        <dt><label for='id_ticket'>{% trans "Ticket" %}</label></dt>
-        <dd><input type='text' name='ticket' /></dd>
-
-        <dt><label for='id_email'>{% trans "Your E-mail Address" %}</label></dt>
-        <dd><input type='text' name='email' /></dd>
-    </dl>
-
-    <input type='submit' value='{% trans "View Ticket" %}' />
-</fieldset>
-{% csrf_token %}</form>
-{% endif %}
-
-{% if helpdesk_settings.HELPDESK_SUBMIT_A_TICKET_PUBLIC %}
-<h2 name='submit'>{% trans "Submit a Ticket" %}</h2>
-
-<p>{% trans "All fields are required. Please provide as descriptive a title and description as possible." %}</p>
-
-<form method='post' action='./#submit' enctype='multipart/form-data'>
-<fieldset>
-    <dl>
-        {% for field in form %}
+<div id="public_tabs_content" class="tab-content">
+  {% if helpdesk_settings.HELPDESK_VIEW_A_TICKET_PUBLIC %}
+    <div class="tab-pane active" id="view_ticket">
+      <br>
+      <div id="public_view_ticket" class="col-sm-12 col-md-6">
+        <form role="form" method="get" action="{% url 'helpdesk_public_view' %}">
+          <div class="form-group">
+            <label for="ticket">{% trans 'Ticket' %}</label>
+            <input class="form-control" type="text" id="ticket" name="ticket" placeholder="{% trans 'Ticket Number' %}">
+          </div>
+          <div class="form-group">
+            <label for="email">{% trans 'E-mail Address' %}</label>
+            <input class="form-control" type="text" id="email" name="email" placeholder="{% trans 'Your E-mail Address' %}">
+          </div>
+          {% csrf_token %}
+          <button class="btn btn-primary" type="submit">{% trans 'View Ticket' %}</button>
+        </form>
+      </div>
+    </div>    
+  {% endif %}   
+  
+    {% if helpdesk_settings.HELPDESK_SUBMIT_A_TICKET_PUBLIC %}
+    <div class="tab-pane" id="submit_ticket">
+      <br>
+      <div id="public_submit_ticket" class="col-sm-12 col-md-6">
+        <p class="text-muted">{% trans "All fields are required. Please provide as descriptive a title and description as possible." %}</p>
+        <form role="form" method="post" action='./#submit_ticket' enctype='multipart/form-data'>
+          {% for field in form %}
             {% if field.is_hidden %}
-                {{ field }}
+              {{ field }}     
             {% else %}
-                <dt><label for='id_{{ field.name }}'>{{ field.label }}</label>{% if not field.field.required %} <span class='form_optional'>{% trans "(Optional)" %}</span>{% endif %}</dt>
-                <dd>{{ field }}</dd>
-                {% if field.errors %}<dd class='error'>{{ field.errors }}</dd>{% endif %}
-                {% if field.help_text %}<dd class='form_help_text'>{{ field.help_text }}</dd>{% endif %}
+              {% if field.errors %}
+                <div class="form-group has-error">
+              {% else %}
+                <div class="form-group">
+              {%endif %} 
+                  <label for="{{ field.name }}">
+                    {{ field.label}}
+                    {% if not field.field_required %}
+                      <span class="text-muted small">{% trans "(Optional)" %}</span>
+                    {% endif %}
+                  </label>
+                  {{ field|class:'form-control' }}
+                  {% if field.errors %}
+                    <span class="help-block">{{ field.errors }}</span>
+                  {% else %}
+                    {% if field.help_text %}
+                      <p class="help-block">{{ field.help_text }}</p>
+                    {% endif %}
+                  {% endif %}
+                </div>
             {% endif %}
-        {% endfor %}
-    </dl>
-    
-    <div class='buttons'>
-        <input type='submit' value='{% trans "Submit Ticket" %}' />
-    </div>
-</fieldset>
+          {% endfor %}
 
-{% csrf_token %}</form>
-{% endif %}
+          {% csrf_token %}
+          <button class="btn btn-primary" type="submit">{% trans 'Submit Ticket' %}</button>
+        </form>
+      </div>
+    </div>    
+  {% endif %}   
+
+  {% if helpdesk_settings.HELPDESK_SHOW_KB_ON_HOMEPAGE %}
+    <div class="tab-pane" id="knowledgebase">
+      <br>
+      <div id="kb_articles" class="panel panel-default">
+        <div class="panel-heading">{% trans "Knowledgebase Categories" %}</div>     
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>{% trans 'Category' %}</th>
+              <th>{% trans 'Description' %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for category in kb_categories %}
+              <tr>
+                <td><a href='{{ category.get_absolute_url }}'>{{ category.title }}</a></td>
+                <td>{{ category.description }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}   
+</div>
 
 {% if not helpdesk_settings.HELPDESK_VIEW_A_TICKET_PUBLIC and not helpdesk_settings.HELPDESK_SUBMIT_A_TICKET_PUBLIC %}
-        <h2>{% trans "Please use button at upper right to login first." %}</h2>
+  <h2>{% trans "Please use button at upper right to login first." %}</h2>
 {% endif %}
+
+<script>
+  $(document).ready(function () {
+    var h=window.location.hash;
+    var t = "#public_tabs a[href=\"" + h + "\"]";
+    $(t).tab('show');
+  });
+</script>
 
 {% endblock %}

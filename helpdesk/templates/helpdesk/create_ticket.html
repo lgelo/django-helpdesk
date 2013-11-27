@@ -1,31 +1,46 @@
-{% extends "helpdesk/base.html" %}{% load i18n %}
+{% extends "helpdesk/base.html" %}
+{% load i18n %}
+{% load helpdesk_bootstrap %}
 
 {% block helpdesk_title %}{% trans "Create Ticket" %}{% endblock %}
 
 {% block helpdesk_body %}
-{% blocktrans %}<h2>Submit a Ticket</h2>
+    <div class="row" id="submit_ticket">
+      <div id="public_submit_ticket" class="col-sm-12 col-md-6">
+        <h2>Submit a Ticket</h2>
 
-<p>Unless otherwise stated, all fields are required. Please provide as descriptive a title and description as possible.</p>{% endblocktrans %}
-
-<form method='post' action='./' enctype='multipart/form-data'>
-<fieldset>
-    <dl>
-        {% for field in form %}
+        <p class="text-muted">{% trans "All fields are required. Please provide as descriptive a title and description as possible." %}</p>
+        <form role="form" method="post" action='./' enctype='multipart/form-data'>
+          {% for field in form %}
             {% if field.is_hidden %}
-                {{ field }}
+              {{ field }}     
             {% else %}
-                <dt><label for='id_{{ field.name }}'>{% trans field.label %}</label>{% if not field.field.required %} <span class='form_optional'>{% trans "(Optional)" %}</span>{% endif %}</dt>
-                <dd>{{ field }}</dd>
-                {% if field.errors %}<dd class='error'>{{ field.errors }}</dd>{% endif %}
-                {% if field.help_text %}<dd class='form_help_text'>{% trans field.help_text %}</dd>{% endif %}
+              {% if field.errors %}
+                <div class="form-group has-error">
+              {% else %}
+                <div class="form-group">
+              {%endif %}
+                <label for="{{ field.name }}">
+                  {{ field.label}}
+                  {% if not field.field_required %}
+                    <span class="text-muted small">{% trans "(Optional)" %}</span>
+                  {% endif %}
+                </label>
+                {{ field|class:'form-control' }}
+                {% if field.errors %}
+                  <span class="help-block">{{ field.errors }}</span>
+                {% else %}
+                  {% if field.help_text %}
+                    <span class="help-block">{{ field.help_text }}</span>
+                  {% endif %}
+                {% endif %}
+              </div>
             {% endif %}
-        {% endfor %}
-    </dl>
-    
-    <div class='buttons'>
-        <input type='submit' value='{% trans "Submit Ticket" %}' />
+          {% endfor %}
+          {% csrf_token %}
+          <button class="btn btn-primary" type="submit">{% trans 'Submit Ticket' %}</button>
+        </form>
+      </div>
     </div>
-</fieldset>
-
-{% csrf_token %}</form>
 {% endblock %}
+

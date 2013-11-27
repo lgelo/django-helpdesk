@@ -1,14 +1,18 @@
-{% extends "helpdesk/public_base.html" %}{% load i18n %}{% load markup %}
+{% extends "helpdesk/public_base.html" %}
+{% load i18n %}
+{% load markup %}
 
 {% block helpdesk_body %}
-<h2>{% blocktrans with item.title as item %}Knowledgebase: {{ item }}{% endblocktrans %}</h2>
 
-<table width='100%'>
-<tr class='row_tablehead'><td>{{ item.title }}</td></tr>
-
-<tr class='row_even row_hover'><th>{{ item.question }}</th></tr>
-<tr class='row_odd'><td>{{ item.answer|markdown }}</td></tr>
-</table>
+<div id="kb_item" class="panel panel-default">
+  <div class="panel-heading">
+  	{% blocktrans with item.title as item %}Knowledgebase: {{ item }}{% endblocktrans %}
+  </div>
+  <ul class="list-group">
+  	<li class="list-group-item">{{ item.question }}</li>
+  	<li class="list-group-item">{{ item.answer|markdown }}</li>
+  </ul>
+</div>
 
 <p>{% blocktrans with item.category.title as category_title and item.category.get_absolute_url as category_url %}View <a href='{{ category_url }}'>other <em>{{ category_title }}</em> articles</a>, or continue <a href='../'>viewing other knowledgebase articles</a>.{% endblocktrans %}</p>
 

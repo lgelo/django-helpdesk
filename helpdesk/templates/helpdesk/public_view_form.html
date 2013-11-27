@@ -1,24 +1,26 @@
 {% extends "helpdesk/public_base.html" %}{% load i18n %}{% load url from future %}
 
 {% block helpdesk_body %}
-<h2>{% trans "View a Ticket" %}</h2>
+	<h2>{% trans "View a Ticket" %}</h2>
+  <div id="public_view_ticket" class="col-sm-12 col-md-6">
+  {% if error_message %}
+    <div class="alert alert-danger">
+      <strong>{% trans "Error:" %}</strong> 
+      {{ error_message }}
+    </div>
+  {% endif %}
 
-<form method='get' action='{% url 'helpdesk_public_view' %}'>
-
-{% if error_message %}<p><strong>{% trans "Error:" %}</strong> {{ error_message }}</p>{% endif %}
-
-<fieldset>
-    <dl>
-        <dt><label for='id_ticket'>{% trans "Ticket" %}</label></dt>
-        <dd><input type='text' name='ticket' /></dd>
-
-        <dt><label for='id_email'>{% trans "Your E-mail Address" %}</label></dt>
-        <dd><input type='text' name='email' /></dd>
-    </dl>
-
-    <input type='submit' value='{% trans "View Ticket" %}' />
-</fieldset>
-{% csrf_token %}</form>
-
-
+    <form role="form" method="get" action="{% url 'helpdesk_public_view' %}">
+      <div class="form-group">
+        <label for="ticket">{% trans 'Ticket' %}</label>
+        <input class="form-control" type="text" id="ticket" name="ticket" placeholder="{% trans 'Ticket Number' %}">
+      </div>
+      <div class="form-group">
+        <label for="email">{% trans 'E-mail Address' %}</label>
+        <input class="form-control" type="text" id="email" name="email" placeholder="{% trans 'Your E-mail Address' %}">
+      </div>
+      {% csrf_token %}
+      <button class="btn btn-primary" type="submit">{% trans 'View Ticket' %}</button>
+    </form>
+  </div>
 {% endblock %}
