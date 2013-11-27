@@ -1,7 +1,6 @@
 {% extends "helpdesk/base.html" %}
 {% load i18n %}
 {% load url from future %}
-{% load helpdesk_tables %}
 {% block helpdesk_title %}
 	{{ helpdesk_settings.HELPDESK_PREPEND_ORG_NAME|default:'' }} {% trans "Helpdesk Dashboard" %}
 {% endblock %}
